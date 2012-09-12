@@ -231,7 +231,7 @@ typedef struct ffi_export_symbol {
 static obj_type obj_types[] = {
 #define obj_type_id_CryptDevice 0
 #define obj_type_CryptDevice (obj_types[obj_type_id_CryptDevice])
-  { NULL, 0, OBJ_TYPE_SIMPLE, "CryptDevice" },
+  { NULL, 0, OBJ_TYPE_FLAG_WEAK_REF, "CryptDevice" },
   {NULL, -1, 0, NULL},
 };
 
@@ -1143,13 +1143,13 @@ static char *obj_interfaces[] = {
 
 
 #define obj_type_CryptDevice_check(L, _index) \
-	*((CryptDevice *)obj_simple_udata_luacheck(L, _index, &(obj_type_CryptDevice)))
+	obj_udata_luacheck(L, _index, &(obj_type_CryptDevice))
 #define obj_type_CryptDevice_optional(L, _index) \
-	*((CryptDevice *)obj_simple_udata_luaoptional(L, _index, &(obj_type_CryptDevice)))
-#define obj_type_CryptDevice_delete(L, _index) \
-	*((CryptDevice *)obj_simple_udata_luadelete(L, _index, &(obj_type_CryptDevice)))
-#define obj_type_CryptDevice_push(L, obj) \
-	obj_simple_udata_luapush(L, &(obj), sizeof(CryptDevice), &(obj_type_CryptDevice))
+	obj_udata_luaoptional(L, _index, &(obj_type_CryptDevice))
+#define obj_type_CryptDevice_delete(L, _index, flags) \
+	obj_udata_luadelete_weak(L, _index, &(obj_type_CryptDevice), flags)
+#define obj_type_CryptDevice_push(L, obj, flags) \
+	obj_udata_luapush_weak(L, (void *)obj, &(obj_type_CryptDevice), flags)
 
 
 
@@ -1335,35 +1335,35 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "int crypt_init_by_name(CryptDevice **, const char *);\n"
 "\n"
-"void crypt_free(CryptDevice);\n"
+"void crypt_free(CryptDevice *);\n"
 "\n"
-"const char * crypt_get_type(CryptDevice);\n"
+"const char * crypt_get_type(CryptDevice *);\n"
 "\n"
-"void crypt_set_rng_type(CryptDevice, int);\n"
+"void crypt_set_rng_type(CryptDevice *, int);\n"
 "\n"
-"int crypt_get_rng_type(CryptDevice);\n"
+"int crypt_get_rng_type(CryptDevice *);\n"
 "\n"
-"int crypt_status(CryptDevice, const char *);\n"
+"int crypt_status(CryptDevice *, const char *);\n"
 "\n"
-"const char * crypt_get_cipher(CryptDevice);\n"
+"const char * crypt_get_cipher(CryptDevice *);\n"
 "\n"
-"const char * crypt_get_cipher_mode(CryptDevice);\n"
+"const char * crypt_get_cipher_mode(CryptDevice *);\n"
 "\n"
-"const char * crypt_get_uuid(CryptDevice);\n"
+"const char * crypt_get_uuid(CryptDevice *);\n"
 "\n"
-"const char * crypt_get_device_name(CryptDevice);\n"
+"const char * crypt_get_device_name(CryptDevice *);\n"
 "\n"
-"uint64_t crypt_get_data_offset(CryptDevice);\n"
+"uint64_t crypt_get_data_offset(CryptDevice *);\n"
 "\n"
-"uint64_t crypt_get_iv_offset(CryptDevice);\n"
+"uint64_t crypt_get_iv_offset(CryptDevice *);\n"
 "\n"
-"int crypt_get_volume_key_size(CryptDevice);\n"
+"int crypt_get_volume_key_size(CryptDevice *);\n"
 "\n"
-"int crypt_keyslot_status(CryptDevice, int);\n"
+"int crypt_keyslot_status(CryptDevice *, int);\n"
 "\n"
-"int crypt_header_backup(CryptDevice, const char *, const char *);\n"
+"int crypt_header_backup(CryptDevice *, const char *, const char *);\n"
 "\n"
-"int crypt_header_restore(CryptDevice, const char *, const char *);\n"
+"int crypt_header_restore(CryptDevice *, const char *, const char *);\n"
 "\n"
 "const char * crypt_get_dir();\n"
 "\n"
@@ -1494,52 +1494,51 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "local obj_type_CryptDevice_push\n"
 "\n"
 "do\n"
-"	ffi_safe_cdef(\"CryptDevice_simple_wrapper\", [=[\n"
-"		struct CryptDevice_t {\n"
-"			const CryptDevice _wrapped_val;\n"
-"		};\n"
-"		typedef struct CryptDevice_t CryptDevice_t;\n"
-"	]=])\n"
+"	local obj_mt, obj_type, obj_ctype = obj_register_ctype(\"CryptDevice\", \"CryptDevice *\")\n"
 "\n"
-"	local obj_mt, obj_type, obj_ctype = obj_register_ctype(\"CryptDevice\", \"CryptDevice_t\")\n"
-"\n"
-"	function obj_type_CryptDevice_check(obj)\n"
-"		return obj._wrapped_val\n"
+"	function obj_type_CryptDevice_check(ptr)\n"
+"		-- if ptr is nil or is the correct type, then just return it.\n"
+"		if not ptr or ffi.istype(obj_ctype, ptr) then return ptr end\n"
+"		-- check if it is a compatible type.\n"
+"		local ctype = tostring(ffi.typeof(ptr))\n"
+"		local bcaster = _obj_subs.CryptDevice[ctype]\n"
+"		if bcaster then\n"
+"			return bcaster(ptr)\n"
+"		end\n"
+"		return error(\"Expected 'CryptDevice *'\", 2)\n"
 "	end\n"
 "\n"
-"	function obj_type_CryptDevice_delete(obj)\n"
-"		local id = obj_to_id(obj)\n"
-"		local valid = nobj_obj_flags[id]\n"
-"		if not valid then return nil end\n"
-"		local val = obj._wrapped_val\n"
+"	function obj_type_CryptDevice_delete(ptr)\n"
+"		local id = obj_ptr_to_id(ptr)\n"
+"		local flags = nobj_obj_flags[id]\n"
+"		if not flags then return nil, 0 end\n"
+"		ffi.gc(ptr, nil)\n"
 "		nobj_obj_flags[id] = nil\n"
-"		return val\n"
+"		return ptr, flags\n"
 "	end\n"
 "\n"
-"	function obj_type_CryptDevice_push(val)\n"
-"		local obj = obj_ctype(val)\n"
-"		local id = obj_to_id(obj)\n"
-"		nobj_obj_flags[id] = true\n"
-"		return obj\n"
+"	function obj_type_CryptDevice_push(ptr, flags)\n"
+"		local id = obj_ptr_to_id(ptr)\n"
+"		-- check weak refs\n"
+"		if nobj_obj_flags[id] then return nobj_weak_objects[id] end\n"
+"\n"
+"		if flags ~= 0 then\n"
+"			nobj_obj_flags[id] = flags\n"
+"			ffi.gc(ptr, obj_mt.__gc)\n"
+"		end\n"
+"		nobj_weak_objects[id] = ptr\n"
+"		return ptr\n"
 "	end\n"
 "\n"
 "	function obj_mt:__tostring()\n"
-"		return sformat(\"CryptDevice: %d\", tonumber(self._wrapped_val))\n"
-"	end\n"
-"\n"
-"	function obj_mt.__eq(val1, val2)\n"
-"		if not ffi.istype(obj_ctype, val2) then return false end\n"
-"		return (val1._wrapped_val == val2._wrapped_val)\n"
+"		return sformat(\"CryptDevice: %p, flags=%d\", self, nobj_obj_flags[obj_ptr_to_id(self)] or 0)\n"
 "	end\n"
 "\n"
 "	-- type checking function for C API.\n"
-"	_priv[obj_type] = function(obj)\n"
-"		if ffi.istype(obj_ctype, obj) then return obj._wrapped_val end\n"
-"		return nil\n"
-"	end\n"
+"	_priv[obj_type] = obj_type_CryptDevice_check\n"
 "	-- push function for C API.\n"
-"	reg_table[obj_type] = function(ptr)\n"
-"		return obj_type_CryptDevice_push(ffi.cast(\"CryptDevice *\", ptr)[0])\n"
+"	reg_table[obj_type] = function(ptr, flags)\n"
+"		return obj_type_CryptDevice_push(ffi.cast(obj_ctype,ptr), flags)\n"
 "	end\n"
 "\n"
 "end\n"
@@ -1558,10 +1557,11 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "-- method: init\n"
 "function _pub.CryptDevice.init(device)\n"
 "  local device_len = #device\n"
+"  local this_flags = OBJ_UDATA_FLAG_OWN\n"
 "  local self\n"
 "  local rc_crypt_init = 0\n"
 "  rc_crypt_init = C.crypt_init(self, device)\n"
-"  return obj_type_CryptDevice_push(self), rc_crypt_init\n"
+"  return obj_type_CryptDevice_push(self, this_flags), rc_crypt_init\n"
 "end\n"
 "register_default_constructor(_pub,\"CryptDevice\",_pub.CryptDevice.init)\n"
 "\n"
@@ -1570,24 +1570,26 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "  header_device = tostring(header_device)\n"
 "  local header_device_len = header_device and #header_device or 0\n"
 "  local name_len = #name\n"
+"  local this_flags = OBJ_UDATA_FLAG_OWN\n"
 "  local self\n"
 "  local rc_crypt_init_by_name_and_header = 0\n"
 "  rc_crypt_init_by_name_and_header = C.crypt_init_by_name_and_header(self, name, header_device)\n"
-"  return obj_type_CryptDevice_push(self), rc_crypt_init_by_name_and_header\n"
+"  return obj_type_CryptDevice_push(self, this_flags), rc_crypt_init_by_name_and_header\n"
 "end\n"
 "\n"
 "-- method: init_by_name\n"
 "function _pub.CryptDevice.init_by_name(name)\n"
 "  local name_len = #name\n"
+"  local this_flags = OBJ_UDATA_FLAG_OWN\n"
 "  local self\n"
 "  local rc_crypt_init_by_name = 0\n"
 "  rc_crypt_init_by_name = C.crypt_init_by_name(self, name)\n"
-"  return obj_type_CryptDevice_push(self), rc_crypt_init_by_name\n"
+"  return obj_type_CryptDevice_push(self, this_flags), rc_crypt_init_by_name\n"
 "end\n"
 "\n"
 "-- method: free\n"
 "function _meth.CryptDevice.free(self)\n"
-"  local self = obj_type_CryptDevice_delete(self)\n"
+"  local self,this_flags = obj_type_CryptDevice_delete(self)\n"
 "  if not self then return end\n"
 "  C.crypt_free(self)\n"
 "  return \n"
@@ -1596,7 +1598,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_type\n"
 "function _meth.CryptDevice.get_type(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_type\n"
 "  rc_crypt_get_type = C.crypt_get_type(self)\n"
 "  return ffi_string(rc_crypt_get_type)\n"
@@ -1604,7 +1606,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: set_rng_type\n"
 "function _meth.CryptDevice.set_rng_type(self, rng_type)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  \n"
 "  C.crypt_set_rng_type(self, rng_type)\n"
 "  return \n"
@@ -1612,7 +1614,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_rng_type\n"
 "function _meth.CryptDevice.get_rng_type(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_rng_type = 0\n"
 "  rc_crypt_get_rng_type = C.crypt_get_rng_type(self)\n"
 "  return rc_crypt_get_rng_type\n"
@@ -1620,7 +1622,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: status\n"
 "function _meth.CryptDevice.status(self, name)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local name_len = #name\n"
 "  local rc_crypt_status = 0\n"
 "  rc_crypt_status = C.crypt_status(self, name)\n"
@@ -1629,7 +1631,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_cipher\n"
 "function _meth.CryptDevice.get_cipher(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_cipher\n"
 "  rc_crypt_get_cipher = C.crypt_get_cipher(self)\n"
 "  return ffi_string(rc_crypt_get_cipher)\n"
@@ -1637,7 +1639,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_cipher_mode\n"
 "function _meth.CryptDevice.get_cipher_mode(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_cipher_mode\n"
 "  rc_crypt_get_cipher_mode = C.crypt_get_cipher_mode(self)\n"
 "  return ffi_string(rc_crypt_get_cipher_mode)\n"
@@ -1645,7 +1647,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_uuid\n"
 "function _meth.CryptDevice.get_uuid(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_uuid\n"
 "  rc_crypt_get_uuid = C.crypt_get_uuid(self)\n"
 "  return ffi_string(rc_crypt_get_uuid)\n"
@@ -1653,7 +1655,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_device_name\n"
 "function _meth.CryptDevice.get_device_name(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_device_name\n"
 "  rc_crypt_get_device_name = C.crypt_get_device_name(self)\n"
 "  return ffi_string(rc_crypt_get_device_name)\n"
@@ -1661,7 +1663,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_data_offset\n"
 "function _meth.CryptDevice.get_data_offset(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_data_offset = 0\n"
 "  rc_crypt_get_data_offset = C.crypt_get_data_offset(self)\n"
 "  return rc_crypt_get_data_offset\n"
@@ -1669,7 +1671,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_iv_offset\n"
 "function _meth.CryptDevice.get_iv_offset(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_iv_offset = 0\n"
 "  rc_crypt_get_iv_offset = C.crypt_get_iv_offset(self)\n"
 "  return rc_crypt_get_iv_offset\n"
@@ -1677,7 +1679,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_volume_key_size\n"
 "function _meth.CryptDevice.get_volume_key_size(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_volume_key_size = 0\n"
 "  rc_crypt_get_volume_key_size = C.crypt_get_volume_key_size(self)\n"
 "  return rc_crypt_get_volume_key_size\n"
@@ -1685,7 +1687,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: keyslot_status\n"
 "function _meth.CryptDevice.keyslot_status(self, keyslot)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  \n"
 "  local rc_crypt_keyslot_status = 0\n"
 "  rc_crypt_keyslot_status = C.crypt_keyslot_status(self, keyslot)\n"
@@ -1694,7 +1696,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: header_backup\n"
 "function _meth.CryptDevice.header_backup(self, requested_type, backup_file)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local requested_type_len = #requested_type\n"
 "  local backup_file_len = #backup_file\n"
 "  local rc_crypt_header_backup = 0\n", /* ----- CUT ----- */
@@ -1704,7 +1706,7 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: header_restore\n"
 "function _meth.CryptDevice.header_restore(self, requested_type, backup_file)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local requested_type_len = #requested_type\n"
 "  local backup_file_len = #backup_file\n"
 "  local rc_crypt_header_restore = 0\n"
@@ -1714,17 +1716,17 @@ static const char *cryptsetup_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "-- method: get_dir\n"
 "function _meth.CryptDevice.get_dir(self)\n"
-"  self = self._wrapped_val\n"
+"  \n"
 "  local rc_crypt_get_dir\n"
 "  rc_crypt_get_dir = C.crypt_get_dir()\n"
 "  return ffi_string(rc_crypt_get_dir)\n"
 "end\n"
 "\n"
 "_push.CryptDevice = obj_type_CryptDevice_push\n"
-"ffi.metatype(\"CryptDevice_t\", _priv.CryptDevice)\n"
+"ffi.metatype(\"CryptDevice\", _priv.CryptDevice)\n"
 "-- End \"CryptDevice\" FFI interface\n"
 "\n", NULL };
-typedef struct crypt_device *CryptDevice;
+typedef struct crypt_device CryptDevice;
 
 
 
@@ -1732,11 +1734,12 @@ typedef struct crypt_device *CryptDevice;
 static int CryptDevice__init__meth(lua_State *L) {
   size_t device_len;
   const char * device;
-  CryptDevice this;
+  int this_flags = OBJ_UDATA_FLAG_OWN;
+  CryptDevice * this;
   int rc_crypt_init = 0;
   device = luaL_checklstring(L,1,&(device_len));
   rc_crypt_init = crypt_init(&(this), device);
-  obj_type_CryptDevice_push(L, this);
+  obj_type_CryptDevice_push(L, this, this_flags);
   lua_pushinteger(L, rc_crypt_init);
   return 2;
 }
@@ -1747,12 +1750,13 @@ static int CryptDevice__init_by_name_and_header__meth(lua_State *L) {
   const char * header_device;
   size_t name_len;
   const char * name;
-  CryptDevice this;
+  int this_flags = OBJ_UDATA_FLAG_OWN;
+  CryptDevice * this;
   int rc_crypt_init_by_name_and_header = 0;
   header_device = luaL_optlstring(L,1,NULL,&(header_device_len));
   name = luaL_checklstring(L,2,&(name_len));
   rc_crypt_init_by_name_and_header = crypt_init_by_name_and_header(&(this), name, header_device);
-  obj_type_CryptDevice_push(L, this);
+  obj_type_CryptDevice_push(L, this, this_flags);
   lua_pushinteger(L, rc_crypt_init_by_name_and_header);
   return 2;
 }
@@ -1761,26 +1765,29 @@ static int CryptDevice__init_by_name_and_header__meth(lua_State *L) {
 static int CryptDevice__init_by_name__meth(lua_State *L) {
   size_t name_len;
   const char * name;
-  CryptDevice this;
+  int this_flags = OBJ_UDATA_FLAG_OWN;
+  CryptDevice * this;
   int rc_crypt_init_by_name = 0;
   name = luaL_checklstring(L,1,&(name_len));
   rc_crypt_init_by_name = crypt_init_by_name(&(this), name);
-  obj_type_CryptDevice_push(L, this);
+  obj_type_CryptDevice_push(L, this, this_flags);
   lua_pushinteger(L, rc_crypt_init_by_name);
   return 2;
 }
 
 /* method: free */
 static int CryptDevice__free__meth(lua_State *L) {
-  CryptDevice this;
-  this = obj_type_CryptDevice_delete(L,1);
+  int this_flags = 0;
+  CryptDevice * this;
+  this = obj_type_CryptDevice_delete(L,1,&(this_flags));
+  if(!(this_flags & OBJ_UDATA_FLAG_OWN)) { return 0; }
   crypt_free(this);
   return 0;
 }
 
 /* method: get_type */
 static int CryptDevice__get_type__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   const char * rc_crypt_get_type = NULL;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_type = crypt_get_type(this);
@@ -1790,7 +1797,7 @@ static int CryptDevice__get_type__meth(lua_State *L) {
 
 /* method: set_rng_type */
 static int CryptDevice__set_rng_type__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   int rng_type;
   this = obj_type_CryptDevice_check(L,1);
   rng_type = luaL_checkinteger(L,2);
@@ -1800,7 +1807,7 @@ static int CryptDevice__set_rng_type__meth(lua_State *L) {
 
 /* method: get_rng_type */
 static int CryptDevice__get_rng_type__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   int rc_crypt_get_rng_type = 0;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_rng_type = crypt_get_rng_type(this);
@@ -1810,7 +1817,7 @@ static int CryptDevice__get_rng_type__meth(lua_State *L) {
 
 /* method: status */
 static int CryptDevice__status__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   size_t name_len;
   const char * name;
   int rc_crypt_status = 0;
@@ -1823,7 +1830,7 @@ static int CryptDevice__status__meth(lua_State *L) {
 
 /* method: get_cipher */
 static int CryptDevice__get_cipher__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   const char * rc_crypt_get_cipher = NULL;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_cipher = crypt_get_cipher(this);
@@ -1833,7 +1840,7 @@ static int CryptDevice__get_cipher__meth(lua_State *L) {
 
 /* method: get_cipher_mode */
 static int CryptDevice__get_cipher_mode__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   const char * rc_crypt_get_cipher_mode = NULL;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_cipher_mode = crypt_get_cipher_mode(this);
@@ -1843,7 +1850,7 @@ static int CryptDevice__get_cipher_mode__meth(lua_State *L) {
 
 /* method: get_uuid */
 static int CryptDevice__get_uuid__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   const char * rc_crypt_get_uuid = NULL;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_uuid = crypt_get_uuid(this);
@@ -1853,7 +1860,7 @@ static int CryptDevice__get_uuid__meth(lua_State *L) {
 
 /* method: get_device_name */
 static int CryptDevice__get_device_name__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   const char * rc_crypt_get_device_name = NULL;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_device_name = crypt_get_device_name(this);
@@ -1863,7 +1870,7 @@ static int CryptDevice__get_device_name__meth(lua_State *L) {
 
 /* method: get_data_offset */
 static int CryptDevice__get_data_offset__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   uint64_t rc_crypt_get_data_offset = 0;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_data_offset = crypt_get_data_offset(this);
@@ -1873,7 +1880,7 @@ static int CryptDevice__get_data_offset__meth(lua_State *L) {
 
 /* method: get_iv_offset */
 static int CryptDevice__get_iv_offset__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   uint64_t rc_crypt_get_iv_offset = 0;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_iv_offset = crypt_get_iv_offset(this);
@@ -1883,7 +1890,7 @@ static int CryptDevice__get_iv_offset__meth(lua_State *L) {
 
 /* method: get_volume_key_size */
 static int CryptDevice__get_volume_key_size__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   int rc_crypt_get_volume_key_size = 0;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_volume_key_size = crypt_get_volume_key_size(this);
@@ -1893,7 +1900,7 @@ static int CryptDevice__get_volume_key_size__meth(lua_State *L) {
 
 /* method: keyslot_status */
 static int CryptDevice__keyslot_status__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   int keyslot;
   int rc_crypt_keyslot_status = 0;
   this = obj_type_CryptDevice_check(L,1);
@@ -1905,7 +1912,7 @@ static int CryptDevice__keyslot_status__meth(lua_State *L) {
 
 /* method: header_backup */
 static int CryptDevice__header_backup__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   size_t requested_type_len;
   const char * requested_type;
   size_t backup_file_len;
@@ -1921,7 +1928,7 @@ static int CryptDevice__header_backup__meth(lua_State *L) {
 
 /* method: header_restore */
 static int CryptDevice__header_restore__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   size_t requested_type_len;
   const char * requested_type;
   size_t backup_file_len;
@@ -1937,7 +1944,7 @@ static int CryptDevice__header_restore__meth(lua_State *L) {
 
 /* method: get_dir */
 static int CryptDevice__get_dir__meth(lua_State *L) {
-  CryptDevice this;
+  CryptDevice * this;
   const char * rc_crypt_get_dir = NULL;
   this = obj_type_CryptDevice_check(L,1);
   rc_crypt_get_dir = crypt_get_dir();
@@ -1976,8 +1983,8 @@ static const luaL_reg obj_CryptDevice_methods[] = {
 
 static const luaL_reg obj_CryptDevice_metas[] = {
   {"__gc", CryptDevice__free__meth},
-  {"__tostring", obj_simple_udata_default_tostring},
-  {"__eq", obj_simple_udata_default_equal},
+  {"__tostring", obj_udata_default_tostring},
+  {"__eq", obj_udata_default_equal},
   {NULL, NULL}
 };
 

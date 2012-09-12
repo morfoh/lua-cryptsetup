@@ -23,9 +23,8 @@
 --
 
 object "CryptDevice" {
-	userdata_type = 'simple',
 	c_source [[
-typedef struct crypt_device *CryptDevice;
+typedef struct crypt_device CryptDevice;
 ]],
 	constructor "init" {
 		c_call "int" "crypt_init" { "CryptDevice *", "&this", "const char *", "device" },
